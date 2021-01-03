@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style>
+        body, html{
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #canvas{
+            display: block;
+            background: #000;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    <title>SnakeTheGame</title>
+</head>
+<body>
+    <canvas id="canvas">Ваш браузер не поддерживает HTML5 и соответственно canvas</canvas>
+<script>
+
+let canvas = document.querySelector('#canvas');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let ctx = canvas.getContext('2d');
+
+let speed   = 3,
+    trail   = [],//snake
+    tail    = 20,//max snake length
+    apples  = [],
+    xSpeed  = 0,
+    ySpeed  = 0,
+    coldown = false,//is pressed key
+    score   = 0,
+    xPlayer = ~~(canvas.width) / 2,//head cordX
+    yPlayer = ~~(canvas.height) / 2,//head cordY
+    gameStarted = false,
+    plaeyrBold = 20;
+
+let gameOver = false;
+let minus;
+const soundEat = new Audio();
+
+window.addEventListener('keydown', changeDirection);
+canvas.addEventListener('click', changeDirectionPhone);
+
+setInterval(loop, 1000/60); // 60 FPS
+
+spawnApple();
+
+function loop() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);//paint field
+
+    xPlayer += xSpeed;//move snakeX
+    yPlayer += ySpeed;//move snakeY
+
+     // teleports
+    if( xPlayer > canvas.width )
+    {xPlayer = 0;}
+
+    if( xPlayer + plaeyrBold < 0 )
+    {xPlayer = canvas.width;}
+
+    if( yPlayer + plaeyrBold < 0 )
+    {yPlayer = canvas.height;}
+
+    if( yPlayer > canvas.height )
+    {yPlayer = 0;}
+
+
+    for(let i = 0; i < trail.length; i++){
+        //paint snake
+        if(trail[i].bold == 20){
+            ctx.fillRect(trail[i].x, trail[i].y, trail[i].bold, trail[i].bold);
+            ctx.fillStyle = trail[i].color;
+        }else if(trail[i].bold == 26){
+            trail[i].color = '#17bd00';
+            ctx.fillStyle = trail[i].color;
+            ctx.fillRect(trail[i].x-3, trail[i].y-3, trail[i].bold, trail[i].bold);
+        }
+        //self collision
+        if(gameStarted){
+            if( xPlayer == trail[i].x && yPlayer == trail[i].y){
+                for(let j = i+1; j < trail.length; j--){
+                    if(trail[j]){
+                        minus = trail.length-(trail.length - i);//take away i links
+
+                        trail[j].color = 'red';
+                        tail--;
+                        if(tail < 10){   
+                            gameOver = true;
+                        }
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if( trail.length > tail ){
+        trail.shift();//take away links
+    }
+
+    trail.push({x: xPlayer, y: yPlayer, color: 'lime', bold: plaeyrBold});//add link
+
+    if( trail.length > tail ){
+        trail.shift();//take away links
+    }
+
+    // paint apples
+    for( var a = 0; a < apples.length; a++ )
+    {
+        ctx.fillStyle = apples[a].color;
+        ctx.fillRect(apples[a].x, apples[a].y, 20, 20);//paint
+    }
+
+    //collision apple
+    for(let a=0; a<apples.length; a++){
+        if(xPlayer<apples[a].x+20 && xPlayer+plaeyrBold > apples[a].x && yPlayer<apples[a].y+20 && yPlayer+plaeyrBold > apples[a].y){
+
+            plaeyrBold = 26;
+            soundEat.src = 'eat.mp3';
+            soundEat.play();
+            
+
+            ctx.font = "20px comic sans ms";
+            ctx.fillStyle = 'red';
+            ctx.fillText("+10", apples[a].x, apples[a].y);//+10 if snake ate an apple
+            ctx.stroke();
+
+            apples.splice(a,1);//delete apple
+            speed+=0.1;
+            tail+=10;
+            score += 10;
+
+            
+
+            spawnApple();
+        }
+    }
+
+    ctx.font = "50px comic sans ms";
+    ctx.fillStyle = 'white';
+    ctx.fillText(score, canvas.width/2, canvas.height-30);//score
+    ctx.stroke();
+
+    if(minus){
+        ctx.font = "30px comic sans ms";
+        ctx.fillStyle = 'red';
+        ctx.fillText("-"+minus, xPlayer, yPlayer);
+        ctx.stroke();
+
+        setTimeout(() => {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(xPlayer-30,yPlayer-30, xPlayer,yPlayer);
+
+            score -= minus;
+
+            minus = false;
+        }, 1000);
+        if(score >= canvas.width*canvas.height - 10000){
+            location.reload();
+            alert('you won!');
+        }
+    }
+
+    ctx.font = "20px comic sans ms";
+    ctx.fillStyle = 'white';
+    ctx.fillText(Math.abs(speed).toFixed(1), 10, 20);//print speed
+    ctx.stroke();
+
+     
+
+    if(score < 0){
+        gameOver = true;
+    }
+
+    if(gameOver){
+        location.reload();
+        alert('gameOver(');
+    }
+}
+
+function spawnApple() {
+    let
+        newApple = {
+            x: ~~(Math.random() * canvas.width),
+            y: ~~(Math.random() * canvas.height),
+            color: 'red'
+        };
+    if((newApple.x < 30 || newApple.x > canvas.width - 30)
+    ||
+    (newApple.y < 30 || newApple.y > canvas.height - 30)){ spawnApple(); return;}
+    for (let i = 0; i < trail.length; i++) {
+        if(trail[i].x == newApple.x && trail[i].y == newApple.y){ spawnApple(); return;}
+    }
+
+    apples.push(newApple);
+
+    setTimeout(() => {
+        plaeyrBold = 20;
+    }, 30);
+}
+
+function changeDirection(e) {
+    if( coldown ) return false;
+    
+
+    if (e.keyCode == 37 && !(xSpeed > 0)) { leftSnake(); }
+
+    if (e.keyCode == 38 && !(ySpeed > 0)) { topSnake(); }
+
+    if (e.keyCode == 39 && !(xSpeed < 0)) { rightSnake(); }
+
+    if (e.keyCode == 40 && !(ySpeed < 0)) { bottomSnake(); }
+
+    if (e.keyCode == 88 && !(ySpeed < 0)) {
+        speed -= 0.1; 
+        score -= 20
+        if(speed < 3) speed = 3;
+    }
+
+    coldown = true;
+    gameStarted = true;
+
+    setTimeout(() => {
+        coldown = false
+    }, 100);
+}
+function changeDirectionPhone(e) {
+    if( coldown ) return false;
+
+    if (e.offsetX < canvas.width/2 && !(xSpeed > 0)) { leftSnake(); }
+
+    if (e.offsetY < canvas.height/2 && !(ySpeed > 0)) { topSnake(); }
+
+    if (e.offsetX > canvas.width/2 && !(xSpeed < 0)) { rightSnake(); }
+
+    if (e.offsetY > canvas.height/2 && !(ySpeed < 0)) { bottomSnake(); }
+
+    coldown = true;
+    gameStarted = true;
+
+    setTimeout(() => {
+        coldown = false
+    }, 100);
+}
+
+function leftSnake() {
+    xSpeed = -speed; ySpeed = 0;
+}
+function topSnake() {
+    xSpeed = 0; ySpeed = -speed;
+}
+function rightSnake() {
+    xSpeed = speed; ySpeed = 0;
+}
+function bottomSnake() {
+    xSpeed = 0; ySpeed = speed;
+}
+</script>
+</body>
+</html>
